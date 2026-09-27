@@ -1,5 +1,9 @@
 local _version = "1.6.66"
 
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
 if getgenv().DestinyHub_IsLoading then
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
@@ -9,36 +13,15 @@ if getgenv().DestinyHub_IsLoading then
             Icon = "rbxassetid://97596339693490"
         })
     end)
-    
     return
 end
 getgenv().DestinyHub_IsLoading = true
-
-pcall(function()
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "DestinyHub Info",
-        Text = "กำลังรอข้อมูล...",
-        Duration = 10,
-        Icon = "rbxassetid://97596339693490"
-    })
-end)
-
-task.wait(10)
 
 local success, result = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/download/" .. _version .. "/main.lua"))()
 end)
 
-if success and result then
-    WindUI = result
-    
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "DestinyHub Success",
-        Text = "โหลด Destiny Hub สำเร็จแล้ว!",
-        Duration = 3,
-        Icon = "rbxassetid://97596339693490"
-    })
-else
+if not success or not result then
     pcall(function()
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "DestinyHub Error",
@@ -47,214 +30,134 @@ else
             Icon = "rbxassetid://97596339693490"
         })
     end)
-    
     getgenv().DestinyHub_IsLoading = nil 
     return
 end
 
+local WindUI = result
 
 pcall(function()
-  WindUI:AddTheme({
-    Name = "Darker-Soft",
-    Primary = Color3.fromHex("#3b82f6"),
-    
-    White = Color3.new(1,1,1),
-    Black = Color3.new(0,0,0),
-    
-    Dialog = Color3.fromHex("#1e1e24"),
-    
-    Background = Color3.fromHex("#111115"),
-    BackgroundTransparency = 0,
-    Hover = Color3.fromHex("#FFFFFF"),
-
-    PanelBackground = Color3.fromHex("#18181f"),
-    PanelBackgroundTransparency = .95,
-    
-    WindowBackground = Color3.fromHex("#111115"),
-    
-    WindowShadow = Color3.new(0,0,0),
-    
-    WindowTopbarTitle = Color3.fromHex("#FFFFFF"),
-    WindowTopbarAuthor = Color3.fromHex("#FFFFFF"),
-    WindowTopbarIcon = Color3.fromHex("#FFFFFF"),
-    WindowTopbarButtonIcon = Color3.fromHex("#FFFFFF"),
-    
-    WindowSearchBarBackground = Color3.fromHex("#18181f"),
-    
-    -- ส่วนของ Tab / ตัวเลือก
-    TabBackground = Color3.fromHex("#18181f"),
-    TabBackgroundHover = Color3.fromHex("#ffffff"),
-    TabBackgroundHoverTransparency = 0.85,
-    TabBackgroundActive = Color3.fromHex("#ffffff"),
-    TabBackgroundActiveTransparency = 0.9,
-    TabText = Color3.fromHex("#A1A1AA"),
-    TabTextTransparency = 0,
-    TabTextTransparencyActive = 0,
-    TabTitle = Color3.fromHex("#FFFFFF"),
-    TabIcon = Color3.fromHex("#A1A1AA"),
-    TabIconTransparency = 0,
-    TabIconTransparencyActive = 0,
-    TabBorderTransparency = 1,
-    TabBorderTransparencyActive = 0.7,
-    TabBorder = Color3.fromHex("#FFFFFF"),
-
-    ElementBackground = Color3.fromHex("#18181f"),
-    ElementBackgroundTransparency = .5,
-    ElementBackgroundHover = Color3.fromHex("#272730"), -- แก้ไขจาก WindUI.Creator:AddColor เป็น Color3.fromHex ปกติ
-    ElementTitle = Color3.fromHex("#FFFFFF"),
-    ElementDesc = Color3.fromHex("#cbd5e1"),
-    ElementIcon = Color3.fromHex("#FFFFFF"),
-    
-    PopupBackground = Color3.fromHex("#18181f"),
-    PopupBackgroundTransparency = 0, -- ปรับเป็นตัวเลขเพื่อป้องกัน Error กรณีตัวแปรสตริง
-    PopupTitle = Color3.fromHex("#FFFFFF"),
-    PopupContent = Color3.fromHex("#cbd5e1"),
-    PopupIcon = Color3.fromHex("#FFFFFF"),
-    
-    DialogBackground = Color3.fromHex("#18181f"),
-    DialogBackgroundTransparency = 0, -- ปรับเป็นตัวเลข
-    DialogTitle = Color3.fromHex("#FFFFFF"),
-    DialogContent = Color3.fromHex("#cbd5e1"),
-    DialogIcon = Color3.fromHex("#FFFFFF"),
-    
-    -- ปรับสีปุ่มเปิดปิด (Toggle)
-    Toggle = Color3.fromHex("#3b82f6"), 
-    ToggleBar = Color3.fromHex("#FFFFFF"),
-    
-    Checkbox = Color3.fromHex("#FFFFFF"),
-    CheckboxIcon = Color3.fromHex("#FFFFFF"),
-    CheckboxBorder = Color3.fromHex("#52525b"),
-    CheckboxBorderTransparency = 0,
-    
-    SliderIcon = Color3.fromHex("#FFFFFF"),
-
-    Slider = Color3.fromHex("#3b82f6"),      
-    SliderThumb = Color3.fromHex("#FFFFFF"),  
-    SliderIconFrom = Color3.fromHex("#FFFFFF"),
-    SliderIconTo = Color3.fromHex("#FFFFFF"),
-    
-    Tooltip = Color3.fromHex("#272730"),
-    TooltipText = Color3.fromHex("#FFFFFF"),
-    TooltipSecondary = Color3.fromHex("#94a3b8"),
-    TooltipSecondaryText = Color3.fromHex("#FFFFFF"),
-
-    TabSectionIcon = Color3.fromHex("#FFFFFF"),
-
-    SectionIcon = Color3.fromHex("#FFFFFF"),
-    
-    SectionExpandIcon = Color3.fromHex("#FFFFFF"),
-    SectionExpandIconTransparency = 0,
-    SectionBox = Color3.fromHex("#18181f"),
-    SectionBoxTransparency = .5,
-    SectionBoxBorder = Color3.fromHex("#3f3f46"),
-    SectionBoxBorderTransparency = 0,
-    SectionBoxBackground = Color3.fromHex("#18181f"),
-    SectionBoxBackgroundTransparency = .5,
-    
-    SearchBarBorder = Color3.fromHex("#3f3f46"),
-    SearchBarBorderTransparency = 0,
-    
-    Notification = Color3.fromHex("#18181f"),
-    NotificationTitle = Color3.fromHex("#FFFFFF"),
-    NotificationTitleTransparency = 0,
-    NotificationContent = Color3.fromHex("#cbd5e1"),
-    NotificationContentTransparency = 0,
-    NotificationDuration = Color3.fromHex("#FFFFFF"),
-    NotificationDurationTransparency = .9,
-    NotificationBorder = Color3.fromHex("#3f3f46"),
-    NotificationBorderTransparency = 0,
-    
-    DropdownTabBorder = Color3.fromHex("#3f3f46"),
-
-    LabelBackground = Color3.fromHex("#18181f"),
-    LabelBackgroundTransparency = .5,
-
-    Button = Color3.fromHex("#272730"),
-    ButtonText = Color3.fromHex("#FFFFFF"),
-    ButtonIcon = Color3.fromHex("#FFFFFF"),
-    ButtonBackground = Color3.fromHex("#272730"),
-    ButtonBackgroundHover = Color3.fromHex("#32323d"),
-  })
-end)
-
-
-local windowSuccess, Window = pcall(function()
-    return WindUI:CreateWindow({
-    Title = "Project Destiny [v3.0]",
-    Icon =  "rbxassetid://97596339693490",
-    Author = "System Online • Access Granted",
-    Folder = "Destiny Hub",
-    Size = UDim2.fromOffset(620, 520), -- window size
-    Transparent = true, -- window transparency
-    Theme = "Darker-Soft", -- library theme
-    Resizable = true, -- the ability to rezize window
-    SideBarWidth = 200, -- sidebar (tabs) width
-    HideSearchBar = false, -- hide search bar
-    ScrollBarEnabled = true, -- scrollbars that are located to the right of the scroll frame
- 
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "DestinyHub Success",
+        Text = "โหลด Destiny Hub สำเร็จแล้ว!",
+        Duration = 3,
+        Icon = "rbxassetid://97596339693490"
     })
 end)
 
+-- 4. สร้างหน้าต่าง UI (Window)
+local windowSuccess, Window = pcall(function()
+    return WindUI:CreateWindow({
+        Title = "Project Destiny [v3.0]",
+        Icon = "rbxassetid://97596339693490",
+        Author = "System Online • Access Granted",
+        Folder = "Destiny Hub",
+        Size = UDim2.fromOffset(620, 520),
+        Transparent = true,
+        Theme = "Dark",
+        Resizable = true,
+        SideBarWidth = 200,
+        HideSearchBar = false,
+        ScrollBarEnabled = true,
+    })
+end)
 
-WindUI:SetNotificationLower(true)
+if not windowSuccess or not Window then
+    getgenv().DestinyHub_IsLoading = nil
+    return
+end
 
+Window:Section({ Title = "Control Panel" })
 
-Window:Section({
-    Title = "Control Panel",
-})
-
-local Home = Window:Tab({
-    Title = "Changelog !!",
-    Icon = "clipboard-list"
-})
-
-
-local GeneralTab = Window:Tab({
-    Title = "General Main",
-    Icon = "gauge"
-})
-
-
-
-Window:Divider() 
-Window:Section({
-    Title = "Combat(PvP)",
-})
-
-local CombatTab = Window:Tab({
-    Title = "Aimbot PvP",
-    Icon = "swords"
-})
-
-local Visuals = Window:Tab({ 
-    Title = "Visuals (ESP)",
-    Icon = "crosshair" 
-})
-
-local System = Window:Tab({
-    Title = "System /Core",
-    Icon = "package" 
-})
-
-
+local Home = Window:Tab({ Title = "Changelog !!", Icon = "clipboard-list" })
+local GeneralTab = Window:Tab({ Title = "General Main", Icon = "gauge" })
 
 Window:Divider() 
-Window:Section({
-    Title = " Configuration",
-})
+Window:Section({ Title = "Combat(PvP)" })
 
-local Bounty = Window:Tab({
-    Title = "Bounty Hunting",
-    Icon = "moon" 
-})
+local CombatTab = Window:Tab({ Title = "Aimbot PvP", Icon = "swords" })
+local Visuals = Window:Tab({ Title = "Visuals (ESP)", Icon = "crosshair" })
+local System = Window:Tab({ Title = "System /Core", Icon = "package" })
 
+Window:Divider() 
+Window:Section({ Title = "Configuration" })
 
-local Config = Window:Tab({
-    Title = "Settings Config",
-    Icon = "wrench"
-})
+local Bounty = Window:Tab({ Title = "Bounty Hunting", Icon = "moon" })
+local Config = Window:Tab({ Title = "Settings Config", Icon = "wrench" })
 
 GeneralTab:Select()
+
+local MyConfig
+
+task.spawn(function()
+    task.wait(1)
+    -- 1. รอให้เกมโหลดเสร็จสมบูรณ์ (ผ่านหน้าจอโหลดเข้าแมพ)
+    if not game:IsLoaded() then
+        game.Loaded:Wait()
+    end
+
+    -- 2. รอให้ Player โหลดตัวตนในแมพเสร็จ (ป้องกัน Character เป็น nil)
+    local player = game:GetService("Players").LocalPlayer
+    while not player.Character do
+        task.wait(0.5)
+    end
+    
+    pcall(function()
+        if Window and Window.ConfigManager then
+            MyConfig = Window.ConfigManager:Config("DestinyConfig")
+            if typeof(MyConfig) == "table" and typeof(MyConfig.Load) == "function" then
+                MyConfig:Load()
+            end
+        end
+    end)
+end)
+
+Config:Button({
+    Title = "Save Configuration",
+    Desc = "บันทึกการตั้งค่าปัจจุบันทั้งหมด",
+    Callback = function()
+        if MyConfig and typeof(MyConfig.Save) == "function" then
+            MyConfig:Save()
+            WindUI:Notify({
+                Title = "System Saved",
+                Content = "บันทึกการตั้งค่าลงระบบเรียบร้อยแล้ว!",
+                Icon = "bell-ring",
+                Duration = 3,
+            })
+        else
+            WindUI:Notify({
+                Title = "Error",
+                Content = "ไม่พบระบบ Config หรือยังไม่ได้โหลด!",
+                Icon = "x",
+                Duration = 3,
+            })
+        end
+    end,
+})
+
+Config:Button({
+    Title = "Reset Configuration",
+    Desc = "ลบไฟล์เซฟและคืนค่าเริ่มต้น",
+    Callback = function()
+        pcall(function()
+            if MyConfig and typeof(MyConfig.Delete) == "function" then
+                MyConfig:Delete()
+            end
+        end)
+        WindUI:Notify({
+            Title = "System Warning",
+            Content = "ล้างค่าการตั้งค่าทั้งหมดเรียบร้อยแล้ว!",
+            Icon = "bell-ring", 
+            Duration = 3,
+        })
+    end,
+})
+
+
+
+
+
+
 
 
 
@@ -330,223 +233,6 @@ Home:Paragraph({
     
 })
 
-local MyConfig = Window.ConfigManager:Config("DestinyConfig")
-
-
-local Input = Home:Input({
-    Title = "FPS Unlocker",
-    Desc = "Enter your desired max FPS", -- optional
-    Type = "Default", -- "Default" or "Textarea". optional
-    Placeholder = "Enter max FPS...", -- placeholder text. optional
-    Value = "9999", -- initial value. optional
-    Locked = false, -- disable input. optional
-    Flag = "FPSUnlocker", -- for config saving. optional
-    Callback = function(text)
-         local num = tonumber(text)
-        if num then
-            if num < 1 then
-                num = 1
-            elseif num > 9999 then
-                num = 9999
-            end
-            
-            -- สั่งตั้งค่า FPS ให้กับเกมผ่าน Executor
-            pcall(function()
-                if setfpscap then
-                    setfpscap(num)
-                end
-            end)
-        end
-    end
-})
-
-
-Config:Button({
-    Title = "Save Configuration",
-    Desc = "บันทึกการตั้งค่าปัจจุบันทั้งหมด",
-    Callback = function()
-        MyConfig:Save()
-        WindUI:Notify({
-            Title = "System Saved",
-            Content = "บันทึกการตั้งค่าลงระบบเรียบร้อยแล้ว!",
-            Icon = "bell-ring",
-            Duration = 3,
-        })
-    end,
-})
-
--- ปุ่ม Reset
-Config:Button({
-    Title = "Reset Configuration",
-    Desc = "ลบไฟล์เซฟและคืนค่าเริ่มต้น",
-    Callback = function()
-        pcall(function()
-            MyConfig:Delete()
-        end)
-        WindUI:Notify({
-            Title = "System Warning",
-            Content = "ล้างค่าการตั้งค่าทั้งหมดเรียบร้อยแล้ว!",
-            Icon = "bell-ring", 
-            Duration = 3,
-        })
-    end,
-})
-
-
-
-
-local Configjson = Config:Section({ 
-    Title = "Config.json", 
-    Icon = "file" -- หรือใช้ "folder", "save" ก็ได้ครับ
-})
-
-
-local importedConfigData = ""
-local configFilePath = "WindUI/Destiny Hub/config/DestinyConfig.json"
-
-Config:Input({
-    Title = "Configuration Code",
-    Desc = "วางโค้ด Config ที่นี่เพื่อ Import หรือคัดลอกออก",
-    Value = "",
-    Placeholder = "วางโค้ด JSON ที่นี่...",
-    Callback = function(text)
-        importedConfigData = text
-    end,
-})
-
-Config:Button({
-    Title = "Import Configuration",
-    Desc = "บันทึกโค้ดตั้งค่าจากช่องด้านบนลงไฟล์",
-    Callback = function()
-        pcall(function()
-            if importedConfigData and importedConfigData ~= "" then
-                if makefolder then
-                    if not isfolder("WindUI") then makefolder("WindUI") end
-                    if not isfolder("WindUI/Destiny Hub") then makefolder("WindUI/Destiny Hub") end
-                    if not isfolder("WindUI/Destiny Hub/config") then makefolder("WindUI/Destiny Hub/config") end
-                end
-                
-                -- เขียนไฟล์ Config หากฟังก์ชัน writefolder รองรับ
-                if writefile then
-                    writefile(configFilePath, importedConfigData)
-                    WindUI:Notify({
-                        Title = "Import Success",
-                        Content = "นำเข้าและบันทึก Config เรียบร้อยแล้ว!",
-                        Duration = 3,
-                    })
-                end
-            else
-                WindUI:Notify({
-                    Title = "Import Failed",
-                    Content = "กรุณากรอกหรือวางโค้ด Config ก่อนกด Import",
-                    Duration = 3,
-                })
-            end
-        end)
-    end,
-})
-
-Config:Button({
-    Title = "Export Configuration",
-    Desc = "คัดลอกโค้ดการตั้งค่าเพื่อแชร์ให้คนอื่น",
-    Callback = function()
-        pcall(function()
-            if isfile and isfile(configFilePath) then
-                local configData = readfile(configFilePath)
-                
-                if setclipboard then
-                    setclipboard(configData)
-                    WindUI:Notify({
-                        Title = "Export Success",
-                        Content = "คัดลอกโค้ด Config ไปยังคลิปบอร์ดแล้ว!",
-                        Duration = 3,
-                    })
-                end
-            else
-                WindUI:Notify({
-                    Title = "Export Failed",
-                    Content = "ไม่พบไฟล์ตั้งค่า กรุณากด Save ก่อน",
-                    Duration = 3,
-                })
-            end
-        end)
-    end,
-})
-
-
-
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
-
-local FPSTag = Window:Tag({
-    Title = "FPS: --",
-    Icon = "gauge",
-    Color = Color3.fromRGB(240, 240, 240),
-})
-
-local frameCount, lastUpdate = 0, os.clock()
-
-RunService.RenderStepped:Connect(function()
-    frameCount = frameCount + 1
-    local now = os.clock()
-    local elapsed = now - lastUpdate
-    
-    -- เปลี่ยนจาก 0.5 เป็น 1.0 วินาที เพื่อลดการคำนวณซ้ำบ่อยเกินไป
-    if elapsed >= 1.0 then
-        local fps = math.floor(frameCount / elapsed)
-        FPSTag:SetTitle(string.format("FPS: %d", fps))
-        
-        frameCount = 0
-        lastUpdate = now
-    end
-end)
-
-local PingTag = Window:Tag({
-    Title = "Ping: --ms",
-    Icon = "wifi",
-    Color = Color3.fromRGB(180, 180, 180),
-})
-
-task.spawn(function()
-    local serverStats = Stats:FindFirstChild("Network") 
-        and Stats.Network:FindFirstChild("ServerStatsItem")
-    local dataPing = serverStats and serverStats:FindFirstChild("Data Ping")
-    
-    while true do
-        local success, ping = pcall(function()
-            if dataPing then
-                return math.floor(dataPing:GetValue())
-            end
-            return 0
-        end)
-        
-        if success and ping then
-            PingTag:SetTitle(string.format("Ping: %dms", ping))
-        end
-        
-        task.wait(2)
-    end
-end)
-
-task.spawn(function()
-    -- รอให้มั่นใจว่า WindUI และตัวแปรที่เกี่ยวข้องพร้อมแล้วจริง ๆ
-    local maxWait = 10
-    local elapsed = 0
-    
-    while not WindUI and elapsed < maxWait do
-        task.wait(0.5)
-        elapsed = elapsed + 0.5
-    end
-
-    -- เพิ่มเวลาเผื่อให้องค์ประกอบภายใน UI สร้างเสร็จสิ้น
-    task.wait(1)
-    
-    pcall(function()
-        if typeof(MyConfig) == "table" and typeof(MyConfig.Load) == "function" then
-            MyConfig:Load()
-        end
-    end)
-end)
 
 
 getgenv().SavedFOVRadius = getgenv().SavedFOVRadius or getgenv().FOVRadius
@@ -1544,9 +1230,6 @@ RunService.RenderStepped:Connect(function(deltaTime)
 end)
 
 
---// =========================================================
---// NEON GLOW ESP
---// =========================================================
 
 getgenv().ESPConfig = getgenv().ESPConfig or {
     ShowName = true,
@@ -3135,7 +2818,176 @@ local Toggle = System:Toggle({
 
 
 
+
+local Input = Home:Input({
+    Title = "FPS Unlocker",
+    Desc = "Enter your desired max FPS", -- optional
+    Type = "Default", -- "Default" or "Textarea". optional
+    Placeholder = "Enter max FPS...", -- placeholder text. optional
+    Value = "9999", -- initial value. optional
+    Locked = false, -- disable input. optional
+    Flag = "FPSUnlocker", -- for config saving. optional
+    Callback = function(text)
+         local num = tonumber(text)
+        if num then
+            if num < 1 then
+                num = 1
+            elseif num > 9999 then
+                num = 9999
+            end
+            
+            -- สั่งตั้งค่า FPS ให้กับเกมผ่าน Executor
+            pcall(function()
+                if setfpscap then
+                    setfpscap(num)
+                end
+            end)
+        end
+    end
+})
+
+
+
+
+
+
+local Configjson = Config:Section({ 
+    Title = "Config.json", 
+    Icon = "file" -- หรือใช้ "folder", "save" ก็ได้ครับ
+})
+
+
+local importedConfigData = ""
+local configFilePath = "WindUI/Destiny Hub/config/DestinyConfig.json"
+
+Config:Input({
+    Title = "Configuration Code",
+    Desc = "วางโค้ด Config ที่นี่เพื่อ Import หรือคัดลอกออก",
+    Value = "",
+    Placeholder = "วางโค้ด JSON ที่นี่...",
+    Callback = function(text)
+        importedConfigData = text
+    end,
+})
+
+Config:Button({
+    Title = "Import Configuration",
+    Desc = "บันทึกโค้ดตั้งค่าจากช่องด้านบนลงไฟล์",
+    Callback = function()
+        pcall(function()
+            if importedConfigData and importedConfigData ~= "" then
+                if makefolder then
+                    if not isfolder("WindUI") then makefolder("WindUI") end
+                    if not isfolder("WindUI/Destiny Hub") then makefolder("WindUI/Destiny Hub") end
+                    if not isfolder("WindUI/Destiny Hub/config") then makefolder("WindUI/Destiny Hub/config") end
+                end
+                
+                -- เขียนไฟล์ Config หากฟังก์ชัน writefolder รองรับ
+                if writefile then
+                    writefile(configFilePath, importedConfigData)
+                    WindUI:Notify({
+                        Title = "Import Success",
+                        Content = "นำเข้าและบันทึก Config เรียบร้อยแล้ว!",
+                        Duration = 3,
+                    })
+                end
+            else
+                WindUI:Notify({
+                    Title = "Import Failed",
+                    Content = "กรุณากรอกหรือวางโค้ด Config ก่อนกด Import",
+                    Duration = 3,
+                })
+            end
+        end)
+    end,
+})
+
+Config:Button({
+    Title = "Export Configuration",
+    Desc = "คัดลอกโค้ดการตั้งค่าเพื่อแชร์ให้คนอื่น",
+    Callback = function()
+        pcall(function()
+            if isfile and isfile(configFilePath) then
+                local configData = readfile(configFilePath)
+                
+                if setclipboard then
+                    setclipboard(configData)
+                    WindUI:Notify({
+                        Title = "Export Success",
+                        Content = "คัดลอกโค้ด Config ไปยังคลิปบอร์ดแล้ว!",
+                        Duration = 3,
+                    })
+                end
+            else
+                WindUI:Notify({
+                    Title = "Export Failed",
+                    Content = "ไม่พบไฟล์ตั้งค่า กรุณากด Save ก่อน",
+                    Duration = 3,
+                })
+            end
+        end)
+    end,
+})
+
+
+
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+
+local FPSTag = Window:Tag({
+    Title = "FPS: --",
+    Icon = "gauge",
+    Color = Color3.fromRGB(240, 240, 240),
+})
+
+local frameCount, lastUpdate = 0, os.clock()
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+    local now = os.clock()
+    local elapsed = now - lastUpdate
+    
+    -- เปลี่ยนจาก 0.5 เป็น 1.0 วินาที เพื่อลดการคำนวณซ้ำบ่อยเกินไป
+    if elapsed >= 1.0 then
+        local fps = math.floor(frameCount / elapsed)
+        FPSTag:SetTitle(string.format("FPS: %d", fps))
+        
+        frameCount = 0
+        lastUpdate = now
+    end
+end)
+
+local PingTag = Window:Tag({
+    Title = "Ping: --ms",
+    Icon = "wifi",
+    Color = Color3.fromRGB(180, 180, 180),
+})
+
+task.spawn(function()
+    local serverStats = Stats:FindFirstChild("Network") 
+        and Stats.Network:FindFirstChild("ServerStatsItem")
+    local dataPing = serverStats and serverStats:FindFirstChild("Data Ping")
+    
+    while true do
+        local success, ping = pcall(function()
+            if dataPing then
+                return math.floor(dataPing:GetValue())
+            end
+            return 0
+        end)
+        
+        if success and ping then
+            PingTag:SetTitle(string.format("Ping: %dms", ping))
+        end
+        
+        task.wait(2)
+    end
+end)
+
+
 local function setupSkillSettings()
+
+    
 CombatTab:Toggle({
     Title = "CamLock (PC/Mobile)",
     Desc  = "Lock onto targets instantly.",
@@ -3961,11 +3813,6 @@ if typeof(Config) == "table" then
         end,
     })
 end
-
-
-
-
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
@@ -3981,40 +3828,67 @@ local selectedGunSkills = {"None"}
 
 local flySpeed = 220
 
--- ✅ แคชเป้าหมายเพื่อไม่ให้ค้นหาทุก Heartbeat
 local cachedNearestTarget = nil
 local lastTargetSearchTime = 0
-local targetSearchInterval = 0.3  -- ค้นหาเป้าหมายทุก 0.3 วินาที
+local targetSearchInterval = 0.3  
 
--- ประกาศตัวแปรไว้ด้านบนสุดและกำหนดค่าเริ่มต้น
 local selectedFaction = "Pirates"
+local teamCheckInProgress = false
+local isTeamSwitchVerified = false  -- ✅ ตัวแปรใหม่: เก็บสถานะการสลับทีมสำเร็จ
+
+-- ✅ ฟังก์ชันใหม่: ตรวจสอบว่าอยู่ทีมที่ถูกต้องแล้ว
+local function verifyTeamSwitch()
+    local player = Players.LocalPlayer
+    if not player or not selectedFaction then return false end
+    
+    local team = player.Team
+    return team and team.Name == selectedFaction
+end
 
 local function checkAndSwitchTeam()
-    task.wait(2)
-    
-    local players = game:GetService("Players")
-    local player = players.LocalPlayer
-    
-    if not selectedFaction then
-        warn("[Auto Team] เกิดข้อผิดพลาด: ยังไม่ได้กำหนดค่า selectedFaction")
-        return
+    if teamCheckInProgress then return end
+
+    local player = Players.LocalPlayer
+    if not player or not selectedFaction then return end
+
+    local team = player.Team
+    if team and team.Name == selectedFaction then 
+        isTeamSwitchVerified = true  -- ✅ ทีมถูกต้อง
+        return 
     end
-    
-    if player.Team then
-        if player.Team.Name == selectedFaction then
-            return
-        end
-    end
-    
-    local args = {
-        "SetTeam2",
-        selectedFaction
-    }
-    
+
+    teamCheckInProgress = true
+    isTeamSwitchVerified = false  -- ✅ รีเซ็ตเป็น false เมื่อเริ่มสลับ
+
     pcall(function()
-        game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("CommF_"):InvokeServer(unpack(args))
+        local CommF = game:GetService("ReplicatedStorage")
+            :WaitForChild("Remotes", 2)
+            :WaitForChild("CommF_", 2)
+
+        if CommF then
+            CommF:InvokeServer("SetTeam2", selectedFaction)
+            task.wait(0.5)  -- ✅ รอให้เซิร์ฟเวอร์ประมวลผล
+            
+            -- ✅ ตรวจสอบว่าสลับสำเร็จหรือไม่
+            if verifyTeamSwitch() then
+                isTeamSwitchVerified = true
+            else
+                isTeamSwitchVerified = false
+            end
+        end
     end)
+
+    task.wait(1)
+    teamCheckInProgress = false
 end
+
+task.spawn(function()
+    while true do
+        checkAndSwitchTeam()
+        task.wait(1)
+    end
+end)
+
 
 -- ✅ ปรับปรุง: ลดการหน่วงเวลา
 local function pressKey(keyName)
@@ -4026,7 +3900,7 @@ local function pressKey(keyName)
                     local keyCode = Enum.KeyCode[targetKey]
                     if keyCode then
                         VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                        task.wait(0.02)  -- ลดจาก 0.05 เป็น 0.02
+                        task.wait(0.02)
                         VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
                     end
                 end
@@ -4035,7 +3909,7 @@ local function pressKey(keyName)
             local keyCode = Enum.KeyCode[keyName]
             if keyCode then
                 VirtualInputManager:SendKeyEvent(true, keyCode, false, game)
-                task.wait(0.02)  -- ลดจาก 0.05 เป็น 0.02
+                task.wait(0.02)
                 VirtualInputManager:SendKeyEvent(false, keyCode, false, game)
             end
         end
@@ -4225,6 +4099,11 @@ end
 
 local function runAutoBounty(deltaTime)
     if not autoBountyEnabled then return end
+
+    -- ✅ หยุด autoBounty ชั่วคราวจนกว่าจะสลับทีมสำเร็จ
+    if not isTeamSwitchVerified then
+        return
+    end
 
     local Players = game:GetService("Players")
     local LocalPlayer = Players.LocalPlayer
@@ -4488,8 +4367,10 @@ local Toggle = Bounty:Toggle({
         end
 
         if autoBountyEnabled then
-            lastTargetSearchTime = 0  -- รีเซ็ตตัวจับเวลา
-            cachedNearestTarget = nil  -- ล้างแคช
+            isTeamSwitchVerified = false  -- ✅ รีเซ็ตเมื่อเปิด autoBounty
+            checkAndSwitchTeam()  
+            lastTargetSearchTime = 0
+            cachedNearestTarget = nil
             
             bountyConnection = RunService.Heartbeat:Connect(function(deltaTime)
                 runAutoBounty(deltaTime)
@@ -4532,15 +4413,15 @@ local DropdownMyFaction = Bounty:Dropdown({
     Title = "Auto Team",
     Desc = "Select your faction. The system will check and switch automatically.",
     Values = {"Marines", "Pirates"},
-    Value = "Pirates",
+    Value = selectedFaction, -- ใช้ค่าจากตัวแปรหลัก
     Multi = false,
     Locked = false,
     Flag = "my_faction_select",
     Callback = function(selected)
         selectedFaction = selected
-        checkAndSwitchTeam()
     end
 })
+
 
 
     local UtilitySection = Bounty:Section({ 
