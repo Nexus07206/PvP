@@ -605,31 +605,50 @@ task.spawn(function()
     end)
     if not success or not Mouse then return end
 
+    local lastCachedScreenPoint = nil
+local lastCachedRootPart = nil
+
+local function getCachedScreenPoint(rootPart)
+    if rootPart ~= lastCachedRootPart then
+        lastCachedScreenPoint = Camera:WorldToScreenPoint(rootPart.Position)
+        lastCachedRootPart = rootPart
+    end
+    return lastCachedScreenPoint
+end
+
+    
+
     local oldIndex
-    oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
-        if getgenv().SkillRedirectEnabled and self == Mouse then
-            local rootPart = getTargetCFrame()
-            if rootPart then
-                if idx == "Hit" then 
-                    return rootPart.CFrame
-                elseif idx == "Target" then 
-                    return rootPart
-                elseif idx == "X" or idx == "Y" then 
-                    local screenPoint = Camera:WorldToScreenPoint(rootPart.Position)
-                    return screenPoint[idx]
-                end
+oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, idx)
+    if getgenv().SkillRedirectEnabled and self == Mouse then
+        local rootPart = getTargetCFrame()
+        if rootPart then
+            if idx == "Hit" then 
+                return rootPart.CFrame
+            elseif idx == "Target" then 
+                return rootPart
+            elseif idx == "X" or idx == "Y" then 
+                local screenPoint = getCachedScreenPoint(rootPart)  -- ใช้ cache แทน
+                return screenPoint[idx]
             end
         end
-        return oldIndex(self, idx)
-    end))
+    end
+    return oldIndex(self, idx)
+end))
 
-    local oldNamecall
-    oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
-        local method = getnamecallmethod()
-        local enabled = getgenv().SkillRedirectEnabled
+local lastProcessedTime = 0
+local processDelay = 0.016  -- ~1 frame @ 60 FPS
+
+local oldNamecall
+oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local enabled = getgenv().SkillRedirectEnabled
+    
+    if enabled and (method == "FireServer" or method == "InvokeServer") then
         local rootPart = getTargetCFrame()
-
-        if enabled and rootPart and (method == "FireServer" or method == "InvokeServer") then
+        
+        if rootPart and (tick() - lastProcessedTime) >= processDelay then
+            lastProcessedTime = tick()
             local targetCFrame = rootPart.CFrame
             local targetPos = targetCFrame.Position
             local args = { ... }
@@ -646,13 +665,21 @@ task.spawn(function()
             
             return oldNamecall(self, unpack(args))
         end
+    end
 
-        return oldNamecall(self, ...)
-    end))
+    return oldNamecall(self, ...)
+end))
 end)
+
 
 local currentUiColor = Color3.fromRGB(255, 255, 255)
 local displayedUiColor = currentUiColor
+
+-- ⭐ Cache ตัวแปรให้อยู่นอก RenderStepped
+local lastCachedMyRoot = nil
+local lastCachedCamera = nil
+local targetingUpdateCounter = 0
+local targetingUpdateInterval = 3  -- ค้นหาเป้าหมายทุก 3 เฟรม (~20 ครั้ง/วินาที)
 
 RunService.RenderStepped:Connect(function(dt)
     displayedUiColor = displayedUiColor:Lerp(currentUiColor, math.clamp(dt * 20, 0, 1))
@@ -667,13 +694,22 @@ RunService.RenderStepped:Connect(function(dt)
         return
     end
 
-    local myRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
-    if not myRoot then
+    -- ⭐ Cache myRoot เพื่อไม่ต้อง FindFirstChild ทุกเฟรม
+    if lastCachedCamera ~= camera then
+        lastCachedCamera = camera
+    end
+    
+    if not lastCachedMyRoot or not lastCachedMyRoot.Parent then
+        lastCachedMyRoot = character:FindFirstChild("HumanoidRootPart") or character:FindFirstChild("Torso")
+    end
+    
+    if not lastCachedMyRoot then
         getgenv().CurrentTarget = nil
         if Snapline then Snapline.Visible = false end
         return
     end
 
+    local myRoot = lastCachedMyRoot
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
 
@@ -687,13 +723,7 @@ RunService.RenderStepped:Connect(function(dt)
                 FOVUI.Position = UDim2.new(0, refPos.X, 0, refPos.Y)
                 local size = (getgenv().FOVRadius or 100) * 2
                 FOVUI.Size = UDim2.new(0, size, 0, size)
-                
-                pcall(function()
-                    FOVUI.Color = displayedUiColor
-                end)
-                pcall(function()
-                    FOVUI.BackgroundColor3 = displayedUiColor
-                end)
+                FOVUI.BackgroundColor3 = displayedUiColor
             end
         end
     end
@@ -705,34 +735,23 @@ RunService.RenderStepped:Connect(function(dt)
         return
     end
 
-    local bestTarget = nil
-    local shortestDistance = math.huge
-    local maxDistance = getgenv().MaxDistance or 1000
-    local validTargets = GetAllValidTargets()
+    -- ⭐ ค้นหาเป้าหมายเฉพาะทุก N เฟรม แทนทุกเฟรม
+    targetingUpdateCounter = targetingUpdateCounter + 1
+    
+    if targetingUpdateCounter >= targetingUpdateInterval then
+        targetingUpdateCounter = 0
+        
+        local bestTarget = nil
+        local shortestDistance = math.huge
+        local maxDistance = getgenv().MaxDistance or 1000
+        local validTargets = GetAllValidTargets()
 
-    -- ค้นหาเป้าหมายตามโหมดที่เลือก
-    if mode == "360°" then
-        for _, char in ipairs(validTargets) do
-            if char and char ~= character and not ShouldIgnoreTarget(char) then
-                local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-                if rootPart then
-                    local distance = (myRoot.Position - rootPart.Position).Magnitude
-                    if distance <= maxDistance and distance < shortestDistance then
-                        shortestDistance = distance
-                        bestTarget = rootPart
-                    end
-                end
-            end
-        end
-
-    elseif mode == "180°" then
-        local lookVector = camera.CFrame.LookVector
-        for _, char in ipairs(validTargets) do
-            if char and char ~= character and not ShouldIgnoreTarget(char) then
-                local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-                if rootPart then
-                    local directionToTarget = (rootPart.Position - camera.CFrame.Position).Unit
-                    if lookVector:Dot(directionToTarget) > 0 then
+        -- ค้นหาเป้าหมายตามโหมดที่เลือก
+        if mode == "360°" then
+            for _, char in ipairs(validTargets) do
+                if char and char ~= character and not ShouldIgnoreTarget(char) then
+                    local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+                    if rootPart then
                         local distance = (myRoot.Position - rootPart.Position).Magnitude
                         if distance <= maxDistance and distance < shortestDistance then
                             shortestDistance = distance
@@ -741,13 +760,31 @@ RunService.RenderStepped:Connect(function(dt)
                     end
                 end
             end
+
+        elseif mode == "180°" then
+            local lookVector = camera.CFrame.LookVector
+            for _, char in ipairs(validTargets) do
+                if char and char ~= character and not ShouldIgnoreTarget(char) then
+                    local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+                    if rootPart then
+                        local directionToTarget = (rootPart.Position - camera.CFrame.Position).Unit
+                        if lookVector:Dot(directionToTarget) > 0 then
+                            local distance = (myRoot.Position - rootPart.Position).Magnitude
+                            if distance <= maxDistance and distance < shortestDistance then
+                                shortestDistance = distance
+                                bestTarget = rootPart
+                            end
+                        end
+                    end
+                end
+            end
+
+        else
+            bestTarget = GetTargetInFOV(refPos)
         end
 
-    else
-        bestTarget = GetTargetInFOV(refPos)
+        getgenv().CurrentTarget = bestTarget
     end
-
-    getgenv().CurrentTarget = bestTarget
 
     -- ระบบ Camlock
     if getgenv().CamlockEnabled and getgenv().CurrentTarget then
@@ -759,8 +796,8 @@ RunService.RenderStepped:Connect(function(dt)
         end
     end
 
-    -- ระบบแสดงเส้น Tracer / Snapline (แก้ไขและรวมโค้ดสมบูรณ์)
-    if getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
+    -- ⭐ ลด tracer ให้ update ทุก 2 เฟรม
+    if targetingUpdateCounter % 2 == 0 and getgenv().CurrentTarget and getgenv().ShowTracer and Snapline then
         local targetPart = getgenv().CurrentTarget
         
         if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
@@ -787,12 +824,8 @@ RunService.RenderStepped:Connect(function(dt)
                 Snapline.From = startPos
                 Snapline.To = Vector2.new(targetScreenPos.X, targetScreenPos.Y)
                 Snapline.Color = displayedUiColor
-                
-                pcall(function()
-                    Snapline.Thickness = getgenv().TracerThickness or 1
-                    Snapline.Transparency = getgenv().TracerTransparency or 1
-                end)
-
+                Snapline.Thickness = getgenv().TracerThickness or 1
+                Snapline.Transparency = getgenv().TracerTransparency or 1
                 Snapline.Visible = true
             else
                 Snapline.Visible = false
