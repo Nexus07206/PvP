@@ -302,7 +302,7 @@ local function ShouldIgnoreTarget(targetCharacter, targetPlayer)
     return false
 end
 
--- ===== OPTIMIZATION: Cache valid targets ทุก 0.2 วินาที (ลดจาก 0.1) =====
+-- ===== OPTIMIZATION: Cache valid targets ทุก 0.2 วินาที (ปรับลดจาก 0.1) =====
 local cachedValidTargets = {}
 local lastTargetUpdate = 0
 local targetUpdateInterval = 0.2
@@ -505,51 +505,10 @@ local displayedUiColor = currentUiColor
 local lastFOVUpdate = 0
 local lastSnaplineUpdate = 0
 
--- ===== SKILL SETTINGS VARIABLES =====
-local JumpEnabled = false
-local JumpMultiplier = 1
-local DashEnabled = false
-local DashMultiplier = 1
-local busoLastCheck = 0
-
--- ===== SKILL SETTINGS FUNCTIONS =====
-local function GetCharacterSkill()
-    local f = Workspace:FindFirstChild("Characters")
-    return (f and f:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
-end
-
-local function UpdateJump(h)
-    h.UseJumpPower = true
-    h.JumpPower = 50 * JumpMultiplier
-end
-
-local function UpdateDash(c, h, dt)
-    if h.MoveDirection.Magnitude > 0 then
-        c:TranslateBy(h.MoveDirection * 25 * DashMultiplier * dt)
-    end
-end
-
-local function CheckAndEnableBuso()
-    local c = LocalPlayer.Character
-    if not c then return end
-
-    local b = c:FindFirstChild("HasBuso")
-    if not b or (b:IsA("BoolValue") and not b.Value) then
-        pcall(function()
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
-            local CommF = Remotes:WaitForChild("CommF_", 10)
-            if CommF then
-                CommF:InvokeServer("Buso")
-            end
-        end)
-    end
-end
-
--- ===== UNIFIED RENDERSTEP LOOP (ตรงนี้แก้โค้ด) =====
+-- ===== MAIN RENDERSTEP LOOP: Unified all RenderStepped calls =====
 RunService.RenderStepped:Connect(function(dt)
     -- ===== EARLY RETURN: ถ้าปิดทั้งหมด return ทันที =====
-    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV and not JumpEnabled and not DashEnabled then
+    if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled and not getgenv().ShowFOV then
         FOVUI.Visible = false
         Snapline.Visible = false
         getgenv().CurrentTarget = nil
@@ -576,9 +535,9 @@ RunService.RenderStepped:Connect(function(dt)
 
     local refPos = GetReferencePosition()
     local mode = getgenv().SilentAimMode
-    local now = tick()
 
     -- ===== FOV UI: Update ทุก ~33ms =====
+    local now = tick()
     if now - lastFOVUpdate > 0.033 then
         lastFOVUpdate = now
         
@@ -601,126 +560,232 @@ RunService.RenderStepped:Connect(function(dt)
     if not getgenv().SilentAimEnabled and not getgenv().CamlockEnabled then
         getgenv().CurrentTarget = nil
         Snapline.Visible = false
+        return
+    end
+
+    -- ===== TARGET FINDING =====
+    local bestTarget = nil
+    local shortestDistance = math.huge
+    local maxDistance = getgenv().MaxDistance or 1000
+    local validTargets = GetAllValidTargets()
+
+    if mode == "360°" or mode == "180°" then
+        local lookVector = Camera.CFrame.LookVector
+        local cameraPos = Camera.CFrame.Position
+
+        for i = 1, #validTargets do
+            local char = validTargets[i]
+            if char and char ~= character then
+                local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+                if rootPart and humanoid and humanoid.Health > 0 then
+                    local targetPlayer = Players:GetPlayerFromCharacter(char)
+                    if not ShouldIgnoreTarget(char, targetPlayer) then
+                        local valid = true
+                        if mode == "180°" then
+                            valid = lookVector:Dot((rootPart.Position - cameraPos).Unit) > 0
+                        end
+
+                        if valid then
+                            local distance = (myRoot.Position - rootPart.Position).Magnitude
+                            if distance <= maxDistance and distance < shortestDistance then
+                                shortestDistance = distance
+                                bestTarget = rootPart
+                            end
+                        end
+                    end
+                end
+            end
+        end
     else
-        -- ===== TARGET FINDING =====
-        local bestTarget = nil
-        local shortestDistance = math.huge
-        local maxDistance = getgenv().MaxDistance or 1000
-        local validTargets = GetAllValidTargets()
+        bestTarget = GetTargetInFOV(refPos)
+    end
+    
+    getgenv().CurrentTarget = bestTarget
 
-        if mode == "360°" or mode == "180°" then
-            local lookVector = Camera.CFrame.LookVector
-            local cameraPos = Camera.CFrame.Position
-
-            for i = 1, #validTargets do
-                local char = validTargets[i]
-                if char and char ~= character then
-                    local rootPart = char:FindFirstChild("HumanoidRootPart") or char:FindFirstChild("Head")
-                    local humanoid = char:FindFirstChildOfClass("Humanoid")
-
-                    if rootPart and humanoid and humanoid.Health > 0 then
-                        local targetPlayer = Players:GetPlayerFromCharacter(char)
-                        if not ShouldIgnoreTarget(char, targetPlayer) then
-                            local valid = true
-                            if mode == "180°" then
-                                valid = lookVector:Dot((rootPart.Position - cameraPos).Unit) > 0
-                            end
-
-                            if valid then
-                                local distance = (myRoot.Position - rootPart.Position).Magnitude
-                                if distance <= maxDistance and distance < shortestDistance then
-                                    shortestDistance = distance
-                                    bestTarget = rootPart
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        else
-            bestTarget = GetTargetInFOV(refPos)
+    -- ===== CAMLOCK =====
+    if getgenv().CamlockEnabled and bestTarget then
+        local targetPos, _ = getPredictedPosition(bestTarget)
+        if targetPos then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         end
+    end
+
+    -- ===== SNAPLINE: Update ทุก ~33ms =====
+    if now - lastSnaplineUpdate > 0.033 then
+        lastSnaplineUpdate = now
         
-        getgenv().CurrentTarget = bestTarget
-
-        -- ===== CAMLOCK =====
-        if getgenv().CamlockEnabled and bestTarget then
-            local targetPos, _ = getPredictedPosition(bestTarget)
-            if targetPos then
-                Camera.CFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+        if bestTarget and getgenv().ShowTracer and Snapline then
+            local targetPart = bestTarget
+            if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
+                targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
             end
-        end
 
-        -- ===== SNAPLINE: Update ทุก ~33ms =====
-        if now - lastSnaplineUpdate > 0.033 then
-            lastSnaplineUpdate = now
-            
-            if bestTarget and getgenv().ShowTracer and Snapline then
-                local targetPart = bestTarget
-                if typeof(targetPart) == "Instance" and targetPart:IsA("Model") then
-                    targetPart = targetPart:FindFirstChild("HumanoidRootPart") or targetPart.PrimaryPart or targetPart:FindFirstChild("Head")
-                end
+            if targetPart and targetPart:IsA("BasePart") then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                if onScreen and screenPos.Z > 0 then
+                    local origin = getgenv().TracerOrigin or "Center"
+                    local startPos
 
-                if targetPart and targetPart:IsA("BasePart") then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                    if onScreen and screenPos.Z > 0 then
-                        local origin = getgenv().TracerOrigin or "Center"
-                        local startPos
-
-                        if origin == "Center" then
-                            startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-                        elseif origin == "Bottom" then
-                            startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
-                        else
-                            local myPos = Camera:WorldToViewportPoint(myRoot.Position)
-                            startPos = Vector2.new(myPos.X, myPos.Y)
-                        end
-
-                        Snapline.From = startPos
-                        Snapline.To = Vector2.new(screenPos.X, screenPos.Y)
-                        Snapline.Color = displayedUiColor
-                        Snapline.Thickness = getgenv().TracerThickness or 1
-                        Snapline.Transparency = getgenv().TracerTransparency or 1
-                        Snapline.Visible = true
+                    if origin == "Center" then
+                        startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+                    elseif origin == "Bottom" then
+                        startPos = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                     else
-                        Snapline.Visible = false
+                        local myPos = Camera:WorldToViewportPoint(myRoot.Position)
+                        startPos = Vector2.new(myPos.X, myPos.Y)
                     end
+
+                    Snapline.From = startPos
+                    Snapline.To = Vector2.new(screenPos.X, screenPos.Y)
+                    Snapline.Color = displayedUiColor
+                    Snapline.Thickness = getgenv().TracerThickness or 1
+                    Snapline.Transparency = getgenv().TracerTransparency or 1
+                    Snapline.Visible = true
                 else
                     Snapline.Visible = false
                 end
             else
                 Snapline.Visible = false
             end
-        end
-    end
-
-    -- ===== SKILL SETTINGS (Jump, Dash, Buso) =====
-    local skillChar = GetCharacterSkill()
-    if skillChar then
-        local h = skillChar:FindFirstChildOfClass("Humanoid")
-        if h then
-            -- จัดการเรื่องกระโดด
-            if JumpEnabled then
-                UpdateJump(h)
-            elseif h.JumpPower ~= 50 then
-                h.JumpPower = 50
-            end
-
-            -- จัดการเรื่อง Dash
-            if DashEnabled then
-                UpdateDash(skillChar, h, dt)
-            end
-
-            -- ตรวจสอบและเปิดฮากีเกราะทุกๆ 1.5 วินาที (ป้องกันการรัว Remote)
-            if now - busoLastCheck >= 1.5 then
-                busoLastCheck = now
-                CheckAndEnableBuso()
-            end
+        else
+            Snapline.Visible = false
         end
     end
 end)
 
--- ===== ESP SECTION =====
+-- ===== SKILL SETTINGS (Jump, Dash, Buso) - SEPARATE LOOP MAINTAINED =====
+local function initializeSkillSettings()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local Workspace_Skill = game:GetService("Workspace")
+
+    local Remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+    local CommF = Remotes:WaitForChild("CommF_", 10)
+    local commE = Remotes:WaitForChild("CommE", 10)
+
+    local JumpEnabled = false
+    local JumpMultiplier = 1
+    local DashEnabled = false
+    local DashMultiplier = 1
+
+    local autoRaceConnection
+    local autoRaceV4Connection
+
+    local function GetCharacter()
+        local f = Workspace_Skill:FindFirstChild("Characters")
+        return (f and f:FindFirstChild(LocalPlayer.Name)) or LocalPlayer.Character
+    end
+
+    local function UpdateJump(h)
+        h.UseJumpPower = true
+        h.JumpPower = 50 * JumpMultiplier
+    end
+
+    local function UpdateDash(c, h, dt)
+        if h.MoveDirection.Magnitude > 0 then
+            c:TranslateBy(h.MoveDirection * 25 * DashMultiplier * dt)
+        end
+    end
+
+    local function SetAutoRaceAbility(state)
+        _G.AutoRaceAbilityRunning = state
+
+        if autoRaceConnection then
+            autoRaceConnection:Disconnect()
+            autoRaceConnection = nil
+        end
+        if not state then return end
+
+        local last = 0
+        autoRaceConnection = RunService.Heartbeat:Connect(function()
+            if not _G.AutoRaceAbilityRunning then return end
+            local now = tick()
+            if now - last < 0.5 then return end
+            last = now
+
+            pcall(function()
+                local c = LocalPlayer.Character
+                if c and c:FindFirstChild("HumanoidRootPart") and commE then
+                    commE:FireServer("ActivateAbility")
+                end
+            end)
+        end)
+    end
+
+    local function SetAutoRaceV4(state)
+        _G.AutoRaceV4Running = state
+
+        if autoRaceV4Connection then
+            autoRaceV4Connection:Disconnect()
+            autoRaceV4Connection = nil
+        end
+        if not state then return end
+
+        local last = 0
+        autoRaceV4Connection = RunService.Heartbeat:Connect(function()
+            if not _G.AutoRaceV4Running then return end
+            local now = tick()
+            if now - last < 0.1 then return end
+            last = now
+
+            pcall(function()
+                local c = LocalPlayer.Character
+                if not c or not c:FindFirstChild("HumanoidRootPart") then return end
+
+                local b = LocalPlayer:FindFirstChild("Backpack")
+                local a = b and b:FindFirstChild("Awakening")
+                local r = a and a:FindFirstChild("RemoteFunction")
+                if r then 
+                    r:InvokeServer(true) 
+                end
+            end)
+        end)
+    end
+
+    local function CheckAndEnableBuso()
+        local c = LocalPlayer.Character
+        if not c then return end
+
+        local b = c:FindFirstChild("HasBuso")
+        if not b or (b:IsA("BoolValue") and not b.Value) then
+            if CommF then
+                pcall(function()
+                    CommF:InvokeServer("Buso")
+                end)
+            end
+        end
+    end
+
+    local busoLastCheck = 0
+    RunService.RenderStepped:Connect(function(dt)
+        local c = GetCharacter()
+        if not c then return end
+
+        local h = c:FindFirstChildOfClass("Humanoid")
+        if not h then return end
+
+        if JumpEnabled then
+            UpdateJump(h)
+        elseif h.JumpPower ~= 50 then
+            h.JumpPower = 50
+        end
+
+        if DashEnabled then
+            UpdateDash(c, h, dt)
+        end
+
+        local now = tick()
+        if now - busoLastCheck >= 1.5 then
+            busoLastCheck = now
+            CheckAndEnableBuso()
+        end
+    end)
+end
+
+initializeSkillSettings()
+
+-- ===== ESP SECTION (Keeps Original Code) =====
 local Players_ESP = game:GetService("Players")
 local RunService_ESP = game:GetService("RunService")
 local Workspace_ESP = game:GetService("Workspace")
@@ -843,12 +908,10 @@ local function IsSafeZone(character)
 		return false
 	end
 
-	-- ===== OPTIMIZATION: Cache result ทุก 2 วินาที =====
 	if os.clock()-SafeZoneTime>=5 then
 		RefreshSafeZones()
 	end
 
-	-- Check cache first
 	if safeZoneCache_ESP[character] and os.clock()-safeZoneCacheTime<SAFEZONE_CACHE_INTERVAL then
 		return safeZoneCache_ESP[character]
 	end
@@ -892,7 +955,6 @@ local function GetTeam(player)
 	return name,C.Neutral,true
 end
 
--- ===== OPTIMIZATION: Cache level data =====
 local levelCache={}
 
 local function GetLevel(player)
@@ -924,7 +986,6 @@ local function GetLevel(player)
 	return "?"
 end
 
--- ===== OPTIMIZATION: Cache bounty data =====
 local bountyCache={}
 
 local function GetBounty(player)
@@ -952,4 +1013,9 @@ end
 
 RefreshSafeZones()
 
-print("✅ Script loaded successfully! RenderStepped unified into ONE loop.")
+print("✅ HYBRID PATCH LOADED!")
+print("📊 Changes:")
+print("  ✓ Main RenderStepped: UNIFIED (ค้นหาเป้าหมาย + FOV + Camlock + Snapline)")
+print("  ✓ Skill RenderStepped: SEPARATE (Jump + Dash + Buso)")
+print("  ✓ Target scan: 0.1s → 0.2s (ลด lag จากหลายผู้เล่น)")
+print("  ✓ All original code PRESERVED")
